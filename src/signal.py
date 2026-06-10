@@ -61,7 +61,7 @@ def suggest_strike(df: pd.DataFrame, spot_price: float) -> dict:
     Suggest the best put strike for the nearest 25-45 DTE expiration.
     Targets 80-85% moneyness (15-20% OTM).
     """
-    window = df[(df['DTE'] >= 25) & (df['DTE'] <= 45)]
+    window = df[(df['DTE'] >= 5) & (df['DTE'] <= 14)]
     if window.empty:
         window = df[(df['DTE'] >= 15) & (df['DTE'] <= 60)]
     if window.empty:
@@ -71,7 +71,7 @@ def suggest_strike(df: pd.DataFrame, spot_price: float) -> dict:
     exp_data = window[window['expiration'] == exp]
 
     # Target 82% moneyness (18% OTM)
-    target_moneyness = 0.82
+    target_moneyness = 0.83
     best = exp_data.iloc[(exp_data['moneyness'] - target_moneyness).abs().argsort()[:1]]
 
     if best.empty:
