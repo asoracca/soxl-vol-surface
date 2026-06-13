@@ -1,0 +1,1 @@
+date,ticker,signal,price,iv_rank,iv_percentile,atm_iv,otm_put_iv,skew,suggested_strike,expiration,dte,bid,ask,decision,reason,return_5d,return_10d,return_20d,notes

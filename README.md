@@ -39,13 +39,17 @@ The core insight: implied volatility (IV) mean-reverts. When IV Rank is high (>5
 ## Example Outputs
 
 ### IV Rank Dashboard
-![IV Rank Dashboard](assets/iv_rank_history.png)
+![IV rank dashboard](assets/iv_rank_history.png)
 
 ### Volatility Surface
-![Volatility Surface](assets/vol_surface_3d.png)
+![Volatility surface](assets/vol_surface_3d.png)
+
+### Volatility Smile
+![Volatility smile](assets/vol_smile.png)
 
 ### Backtest Results
-![Backtest Results](assets/backtest_results.png)
+![Backtest results](assets/backtest_results.png)
+
 ## Results So Far
 
 This project is currently in the initial research stage. The next step is to run the signal weekly and collect forward-test observations in the journal.
