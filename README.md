@@ -41,7 +41,7 @@ The core insight: implied volatility (IV) mean-reverts. When IV Rank is high (>5
 
 ```bash
 # Clone
-git clone https://github.com/YOUR_USERNAME/soxl-vol-surface.git
+git clone https://github.com/asoracca/soxl-vol-surface.git
 cd soxl-vol-surface
 
 # Install dependencies
