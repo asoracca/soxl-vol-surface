@@ -46,7 +46,11 @@ The core insight: implied volatility (IV) mean-reverts. When IV Rank is high (>5
 
 ### Backtest Results
 ![Backtest Results](assets/backtest_results.png)
+## Results So Far
 
+This project is currently in the initial research stage. The next step is to run the signal weekly and collect forward-test observations in the journal.
+
+Historical results will be added after the first clean backtest and baseline comparison.
 ## Quickstart
 
 ```bash
