@@ -113,5 +113,76 @@ soxl-vol-surface/
 ```
 
 ---
+## Known Limitations & Future Work
+
+- **IV proxy:** Uses 30-day realized volatility as a proxy for implied volatility. 
+  Real IV history requires paid data (CBOE, OptionMetrics). This understates 
+  true premium for deep OTM puts, causing near-zero premiums in the backtest 
+  for older low-price periods.
+
+- **Backtest sample size:** Only 5-14 trades generated depending on lookback. 
+  Statistically insufficient — 50+ trades needed for meaningful conclusions.
+
+- **No Greeks hedging:** Strategy assumes hold-to-expiration with no delta hedging.
+  Real implementation would manage delta exposure dynamically.
+
+## Planned upgrades
+- Integrate CBOE VIX term structure as IV proxy
+- Add Kelly Criterion position sizing
+- Add variance risk premium analysis
+- Extend to multi-ticker (QLD, FNGO, NVDA)
+
+---
+
+## Statistical Disclaimer & Limitations
+
+This project is a quantitative research tool built for learning and 
+exploration. The following limitations are acknowledged explicitly:
+
+### Backtesting caveats
+- **Past performance does not guarantee future results.** All backtest 
+  results are hypothetical and subject to look-ahead bias, overfitting, 
+  and regime change risk.
+- **In-sample testing:** The strategy parameters were developed and tested 
+  on the same dataset. Walk-forward validation and out-of-sample testing 
+  are planned but not yet implemented.
+- **Small sample size:** The backtest generates 5–14 trades depending on 
+  the lookback period. This is statistically insufficient to draw 
+  definitive conclusions — a minimum of 50+ trades is required for 
+  meaningful inference.
+- **IV proxy limitation:** True implied volatility history requires paid 
+  data (CBOE, OptionMetrics). This project uses 30-day realized volatility 
+  as a proxy, which systematically understates true IV for deep OTM puts 
+  and distorts premium estimates for older low-price periods.
+- **No transaction cost modeling beyond estimates:** Real fills, margin 
+  requirements, early assignment risk, and liquidity constraints are not 
+  fully modeled.
+- **Survivorship bias:** SOXL has survived as an ETF. Strategies tested 
+  on surviving instruments overstate expected returns.
+
+### Strategy risk factors
+- SOXL is a 3x leveraged ETF. A 33% drop in semiconductors causes 
+  approximately 100% loss in SOXL. Put sellers face assignment risk 
+  that can exceed the premium collected by orders of magnitude.
+- The variance risk premium (the documented edge underlying this 
+  strategy) is known to compress or disappear during sustained 
+  bear markets and liquidity crises — precisely when losses are largest.
+- IV Rank is a backward-looking signal. High IV Rank indicates 
+  volatility has been elevated historically, not that it will remain 
+  so or revert predictably.
+
+### What would make this more robust
+- Walk-forward validation with train/test splits
+- Monte Carlo significance testing (p-value on Sharpe ratio)
+- Stress testing against known crash periods (2020, 2022, 2026)
+- Real implied volatility data from CBOE or OptionMetrics
+- Out-of-sample paper trading with live trade journal
+- Kelly Criterion position sizing with drawdown limits
+
+### Intended use
+This tool is intended as a **signal generation and research aid**, 
+not a fully autonomous trading system. All signals should be verified 
+manually against live options chain data before execution. Position 
+sizing should never exceed 1–2% of total capital per trade.
 
 *Built as a quant portfolio project. Not financial advice.*
