@@ -20,7 +20,7 @@ from src.vol_surface  import (plot_price_history, plot_vol_surface_3d,
                                plot_vol_surface_interactive, plot_vol_smile)
 from src.iv_rank      import plot_iv_rank_history, get_current_signal
 from src.backtest     import run_backtest, print_backtest_stats, plot_backtest
-from src.signal       import run_signal
+from src.trade_signal       import run_signal
 
 
 def main():
