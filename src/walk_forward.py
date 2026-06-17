@@ -1,12 +1,10 @@
 """
 walk_forward.py
 ---------------
-Runs the walk-forward backtest and prints results.
-Unlike the regular backtest, this only counts trades from TEST periods —
-data the strategy never saw during training.
+Walk-forward backtest, Kelly sizing, stress test, Monte Carlo.
 """
-import pandas as pd
 import numpy as np
+import pandas as pd
 from src.backtest import walk_forward_backtest, stress_test, monte_carlo_significance
 
 
@@ -53,9 +51,57 @@ def print_walk_forward_stats(trades):
         print("  ❌ Strategy fails out-of-sample — likely overfit in-sample")
 
 
+def kelly_sizing(trades):
+    """
+    Kelly Criterion: how much of your account to risk per trade.
+    Formula: f = W - (1-W)/R
+    W = win rate, R = avg win / avg loss ratio
+    Half-Kelly is standard practice (safer).
+    """
+    if trades.empty:
+        return
+
+    wins = trades[trades['outcome'] == 'WIN']
+    loss = trades[trades['outcome'] == 'LOSS']
+
+    if len(loss) == 0 or len(wins) == 0:
+        print("\n── Kelly Criterion ─────────────────────────────────")
+        print("  Need both wins and losses to compute Kelly.")
+        return
+
+    W = len(wins) / len(trades)
+    avg_win  = wins['pnl'].mean()
+    avg_loss = abs(loss['pnl'].mean())
+    R = avg_win / avg_loss
+
+    kelly      = W - (1 - W) / R
+    half_kelly = kelly / 2
+
+    print("\n── Kelly Criterion Position Sizing ────────────────")
+    print(f"  Win rate (W):        {W:.1%}")
+    print(f"  Avg win:             ${avg_win:.2f}")
+    print(f"  Avg loss:            ${avg_loss:.2f}")
+    print(f"  Win/loss ratio (R):  {R:.2f}")
+    print(f"  Full Kelly:          {kelly:.1%} of account per trade")
+    print(f"  Half Kelly (safer):  {half_kelly:.1%} of account per trade")
+
+    account = 19941  # your real portfolio value
+    print(f"\n  On your ${account:,} portfolio:")
+    print(f"  Full Kelly bet:      ${account * kelly:,.0f} per trade")
+    print(f"  Half Kelly bet:      ${account * half_kelly:,.0f} per trade")
+
+    if kelly <= 0:
+        print(f"\n  ❌ Kelly = {kelly:.1%} — negative edge, don't trade this")
+    elif kelly > 0.25:
+        print(f"\n  ⚠️  Full Kelly is high — always use Half Kelly in practice")
+    else:
+        print(f"\n  ✅ Reasonable sizing — Half Kelly recommended")
+
+
 if __name__ == "__main__":
     print("Running walk-forward backtest (train 12mo, test 3mo rolling)...")
     trades = walk_forward_backtest(train_months=12, test_months=3)
     print_walk_forward_stats(trades)
     stress_test(trades)
     monte_carlo_significance(trades)
+    kelly_sizing(trades)

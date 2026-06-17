@@ -5,6 +5,7 @@ import warnings
 warnings.filterwarnings('ignore')
 import numpy as np
 import pandas as pd
+import yfinance as yf
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -144,8 +145,14 @@ def walk_forward_backtest(ticker_symbol="SOXL",
     Only trades generated in TEST period count.
     This simulates what you would have actually known at each point.
     """
-    data = compute_historical_iv(ticker_symbol, period="5y")
-    iv_series = data['rv30']
+    from src.iv_rank import compute_soxl_scaled_iv
+    combined = compute_soxl_scaled_iv(period="5y")
+    data = yf.Ticker(ticker_symbol).history(period="5y")
+    data.index = pd.to_datetime(data.index).tz_localize(None)
+    data["soxl_iv"] = combined["soxl_iv"].reindex(data.index).ffill()
+    data["rv30"] = combined["soxl_rv"].reindex(data.index).ffill()
+    data.dropna(subset=["soxl_iv"], inplace=True)
+    iv_series = data["soxl_iv"]
     iv_rank = compute_iv_rank(iv_series, window=252)
     data['iv_rank'] = iv_rank
     

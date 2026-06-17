@@ -188,3 +188,32 @@ if __name__ == "__main__":
 def compute_historical_iv(ticker_symbol="SOXL", period="2y"):
     return compute_soxl_realized_vol(period=period)
 
+
+
+def compute_soxl_scaled_iv(period="5y"):
+    """
+    Estimate SOXL implied vol by scaling VIX by SOXL/SPY vol ratio.
+    SOXL_IV ≈ VIX × (SOXL_rv / SPY_rv)
+    This is a standard proxy when real options IV history isn't available.
+    """
+    vix = fetch_vix(period=period)
+
+    soxl = yf.Ticker("SOXL").history(period=period)
+    soxl.index = pd.to_datetime(soxl.index).tz_localize(None)
+    soxl['log_ret'] = np.log(soxl['Close'] / soxl['Close'].shift(1))
+    soxl['rv30'] = soxl['log_ret'].rolling(30).std() * np.sqrt(252) * 100
+
+    spy = yf.Ticker("SPY").history(period=period)
+    spy.index = pd.to_datetime(spy.index).tz_localize(None)
+    spy['log_ret'] = np.log(spy['Close'] / spy['Close'].shift(1))
+    spy['rv30'] = spy['log_ret'].rolling(30).std() * np.sqrt(252) * 100
+
+    combined = vix.join(soxl[['Close', 'rv30']].rename(columns={'Close': 'SOXL', 'rv30': 'soxl_rv'}))
+    combined = combined.join(spy[['rv30']].rename(columns={'rv30': 'spy_rv'}))
+    combined = combined.dropna()
+
+    # Scale VIX by vol ratio — gives estimated SOXL IV
+    combined['vol_ratio'] = combined['soxl_rv'] / combined['spy_rv']
+    combined['soxl_iv'] = combined['VIX'] * combined['vol_ratio']
+
+    return combined
