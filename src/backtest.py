@@ -205,7 +205,7 @@ def walk_forward_backtest(ticker_symbol="SOXL",
         start_idx += test_months * 21  # roll forward
     
     return pd.DataFrame(all_test_trades)
-    def stress_test(trades_df):
+def stress_test(trades_df):
     """
     How did the strategy perform during known market crashes?
     If it fails in every crash, it's not robust.
@@ -235,7 +235,7 @@ def walk_forward_backtest(ticker_symbol="SOXL",
         
         print(f"  {event}:")
         print(f"    Trades: {total}, Win rate: {wins/total:.0%}, P&L: ${pnl:.2f}")
-        def monte_carlo_significance(trades_df, n_simulations=10000):
+def monte_carlo_significance(trades_df, n_simulations=10000):
     """
     Randomly shuffle win/loss outcomes and compute Sharpe distribution.
     If your real Sharpe beats 95% of random shuffles, 

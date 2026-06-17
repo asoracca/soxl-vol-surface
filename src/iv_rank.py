@@ -184,3 +184,7 @@ def plot_iv_rank_history(ticker_symbol="SOXL", save=True):
 if __name__ == "__main__":
     get_current_signal()
     plot_iv_rank_history()
+# Alias for backward compatibility with backtest.py
+def compute_historical_iv(ticker_symbol="SOXL", period="2y"):
+    return compute_soxl_realized_vol(period=period)
+
