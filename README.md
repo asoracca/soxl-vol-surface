@@ -234,3 +234,24 @@ manually against live options chain data before execution. Position
 sizing should never exceed 1–2% of total capital per trade.
 
 *Built as a quant portfolio project. Not financial advice.*
+## Heston Stochastic-Volatility Model
+
+Black-Scholes assumes a single constant volatility, so it predicts a *flat*
+implied-vol line across strikes. Markets show a **smile/skew** instead. The
+Heston model (`src/heston.py`) explains why by letting variance follow its own
+mean-reverting random process, correlated with price:
+
+    dS = r*S dt + sqrt(v)*S dW1
+    dv = kappa*(theta - v) dt + sigma*sqrt(v) dW2,   corr(dW1, dW2) = rho
+
+European options are priced via the Heston characteristic function (Gil-Pelaez /
+Carr-Madan semi-analytic integration), then inverted through Black-Scholes to
+recover the implied-vol smile.
+
+**Key result:** with a negative price/vol correlation (rho < 0, the usual equity
+case), Heston produces a **downward skew** — low strikes (puts) price at higher
+implied vol — which a constant-volatility model structurally cannot. This is the
+mechanism behind the vol surface this repo measures empirically, and the upgrade
+from the Black-Scholes Greeks already implemented here.
+
+![Implied-vol smile](data/heston_smile.png)
