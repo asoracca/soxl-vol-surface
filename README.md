@@ -1,18 +1,18 @@
 # SOXL Options Analysis & IV Signal
 
-A quantitative options analysis toolkit for **SOXL** (Direxion Dailys Semiconductor Bull 3X ETF), built to explore implied volatility structure and generate systematic put-selling signals.
+A quantitative options analysis toolkit for **SOXL** (Direxion Daily Semiconductor Bull 3X ETF), built to explore implied volatility structure and generate systematic put-selling signals.
 
 ---
 
 ## What this does
 
-| Module | What it produces |
-|---|---|
-| `fetch_data.py` | Live price history + full options chain from Yahoo Finance |
-| `vol_surface.py` | 3D implied volatility surface (static + interactive) and vol smile charts |
-| `iv_rank.py` | Rolling IV Rank and IV Percentile — the two core signals for premium sellers |
-| `backtest.py` | Historical backtest of "sell 15%-OTM puts when IV Rank > 50" |
-| `signal.py` | Today's go/no-go signal with suggested strike and expiration |
+| Module           | What it produces                                                             |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `fetch_data.py`  | Live price history + full options chain from Yahoo Finance                   |
+| `vol_surface.py` | 3D implied volatility surface (static + interactive) and vol smile charts    |
+| `iv_rank.py`     | Rolling IV Rank and IV Percentile — the two core signals for premium sellers |
+| `backtest.py`    | In-sample backtest + walk-forward (OOS) validation of "sell 15%-OTM puts when IV Rank ≥ 50" |
+| `signal.py`      | Today's go/no-go signal with suggested strike and expiration                 |
 
 ---
 
@@ -22,7 +22,7 @@ SOXL is one of the most volatile liquid ETFs in the US market, which makes it in
 
 This project builds the infrastructure to answer: **is now a good time to sell puts on SOXL?**
 
-The core insight: implied volatility (IV) mean-reverts. When IV Rank is high (>50), the market is overpaying for downside protection. Systematic put sellers can collect that fear premium and profit when volatility normalizes.
+The core insight: implied volatility (IV) mean-reverts. When IV Rank is high (≥50), the market is overpaying for downside protection. Systematic put sellers can collect that fear premium and profit when volatility normalizes.
 
 ---
 
@@ -36,28 +36,48 @@ The core insight: implied volatility (IV) mean-reverts. When IV Rank is high (>5
 - `data/backtest_results.png` — Backtest P&L, win rate, trade distribution
 
 ---
+
 ## Example Outputs
 
 ### IV Rank Dashboard
+
 ![IV rank dashboard](assets/iv_rank_history.png)
 
 ### Volatility Surface
+
 ![Volatility surface](assets/vol_surface_3d.png)
 
 ### Volatility Smile
+
 ![Volatility smile](assets/vol_smile.png)
 
 ### Backtest Results
+
 ![Backtest results](assets/backtest_results.png)
 
 ## Results So Far
 
-This project is currently in the initial research stage. The next step is to run the signal weekly and collect forward-test observations in the journal.
+First validated run (2026-06-29), entry threshold IV Rank ≥ 50:
 
-Historical results will be added after the first clean backtest and baseline comparison.
+| Metric              | In-sample (naive) | Walk-forward (OOS) |
+|---------------------|-------------------|--------------------|
+| Trades              | 9                 | 37                 |
+| Sharpe              | 765.1             | 6.33               |
+| Monte Carlo p-value | n/a               | 0.991              |
+
+The in-sample Sharpe of 765 is **not a real result** — it comes from 9 trades
+with a 100% win rate on the same data used to define the rule. Out-of-sample
+walk-forward validation produces 37 trades with a Monte Carlo p-value of 0.991
+under a random-entry-timing null, meaning the apparent edge is **not
+distinguishable from random timing** at the current sample size and premium
+model. See `journal/2026-06-29-walkforward-validation.md`.
+
+Honest conclusion: no demonstrated edge yet. Real implied-vol data and 50+
+out-of-sample trades are required before any edge claim.
+
 ## Quickstart
 
-```bash
+```
 # Clone
 git clone https://github.com/asoracca/soxl-vol-surface.git
 cd soxl-vol-surface
@@ -88,11 +108,18 @@ IV Rank < 30  →  AVOID       ❌  (vol cheap, premium thin)
 
 ## Backtest methodology
 
-- **Entry**: IV Rank crosses above 50
+- **Entry**: IV Rank ≥ 50 (parameterized as `iv_rank_threshold`, default 50,
+  matching the live discipline rule in the signal module)
+- **IV series**: both `run_backtest` and `walk_forward_backtest` use
+  `compute_soxl_scaled_iv` (VIX scaled by the SOXL/SPY realized-vol ratio), so
+  in-sample and out-of-sample results are directly comparable
+- **Validation**: `main.py` runs walk-forward (train 12mo / test 3mo, rolling),
+  a Monte Carlo significance test under a random-entry-timing null, and a
+  by-regime stress test — the out-of-sample numbers are the headline result
 - **Strike**: 15% out-of-the-money put
-- **Expiration**: ~30 DTE
+- **Expiration**: ~7 DTE
 - **Exit**: Hold to expiration
-- **Premium estimate**: Simplified Black-Scholes approximation using realized vol
+- **Premium estimate**: Simplified Black-Scholes approximation using the scaled IV proxy
 - **Note**: This is a signal validation backtest, not a production P&L model. Real fills, commissions, and margin are not included.
 
 ---
@@ -125,27 +152,29 @@ soxl-vol-surface/
 │   ├── fetch_data.py        ← price + options data
 │   ├── vol_surface.py       ← 3D surface + smile plots
 │   ├── iv_rank.py           ← IV Rank / IV Percentile
-│   ├── backtest.py          ← historical strategy backtest
+│   ├── backtest.py          ← in-sample + walk-forward backtest, MC, stress test
 │   └── signal.py            ← today's trade recommendation
+├── journal/                 ← forward-test / validation notes
 └── data/                    ← generated outputs (gitignored)
 ```
 
 ---
+
 ## Known Limitations & Future Work
 
-- **IV proxy:** Uses 30-day realized volatility as a proxy for implied volatility. 
-  Real IV history requires paid data (CBOE, OptionMetrics). This understates 
-  true premium for deep OTM puts, causing near-zero premiums in the backtest 
-  for older low-price periods.
+- **IV proxy:** Uses VIX scaled by the SOXL/SPY realized-vol ratio as a proxy for
+SOXL implied volatility. Real IV history requires paid data (CBOE, OptionMetrics).
+This distorts premium estimates, especially for deep OTM puts.
 
-- **Backtest sample size:** Only 5-14 trades generated depending on lookback. 
-  Statistically insufficient — 50+ trades needed for meaningful conclusions.
+- **Backtest sample size:** Only 9 in-sample / 37 out-of-sample trades generated.
+Statistically insufficient — 50+ OOS trades needed for meaningful conclusions.
 
 - **No Greeks hedging:** Strategy assumes hold-to-expiration with no delta hedging.
-  Real implementation would manage delta exposure dynamically.
+Real implementation would manage delta exposure dynamically.
 
 ## Planned upgrades
-- Integrate CBOE VIX term structure as IV proxy
+
+- Integrate CBOE VIX term structure / real options IV as the premium input
 - Add Kelly Criterion position sizing
 - Add variance risk premium analysis
 - Extend to multi-ticker (QLD, FNGO, NVDA)
@@ -154,53 +183,54 @@ soxl-vol-surface/
 
 ## Statistical Disclaimer & Limitations
 
-This project is a quantitative research tool built for learning and 
+This project is a quantitative research tool built for learning and
 exploration. The following limitations are acknowledged explicitly:
 
 ### Backtesting caveats
-- **Past performance does not guarantee future results.** All backtest 
-  results are hypothetical and subject to look-ahead bias, overfitting, 
-  and regime change risk.
-- **In-sample testing:** The strategy parameters were developed and tested 
-  on the same dataset. Walk-forward validation and out-of-sample testing 
-  are planned but not yet implemented.
-- **Small sample size:** The backtest generates 5–14 trades depending on 
-  the lookback period. This is statistically insufficient to draw 
-  definitive conclusions — a minimum of 50+ trades is required for 
-  meaningful inference.
-- **IV proxy limitation:** True implied volatility history requires paid 
-  data (CBOE, OptionMetrics). This project uses 30-day realized volatility 
-  as a proxy, which systematically understates true IV for deep OTM puts 
-  and distorts premium estimates for older low-price periods.
-- **No transaction cost modeling beyond estimates:** Real fills, margin 
-  requirements, early assignment risk, and liquidity constraints are not 
-  fully modeled.
-- **Survivorship bias:** SOXL has survived as an ETF. Strategies tested 
-  on surviving instruments overstate expected returns.
+
+- **Past performance does not guarantee future results.** All backtest
+results are hypothetical and subject to look-ahead bias, overfitting,
+and regime change risk.
+- **In-sample vs out-of-sample:** The naive backtest is in-sample and is
+reported only as a baseline (labelled "not tradeable"). Walk-forward
+out-of-sample validation, Monte Carlo significance testing, and regime stress
+testing are now implemented and run in `main.py`; the out-of-sample figures
+are the reported result.
+- **Small sample size:** The backtest generates 9 in-sample / 37 out-of-sample
+trades. This is statistically insufficient to draw definitive conclusions — a
+minimum of 50+ OOS trades is required for meaningful inference.
+- **IV proxy limitation:** True implied volatility history requires paid
+data (CBOE, OptionMetrics). This project scales VIX by the SOXL/SPY realized-vol
+ratio as a proxy, which distorts premium estimates.
+- **No transaction cost modeling beyond estimates:** Real fills, margin
+requirements, early assignment risk, and liquidity constraints are not
+fully modeled.
+- **Survivorship bias:** SOXL has survived as an ETF. Strategies tested
+on surviving instruments overstate expected returns.
 
 ### Strategy risk factors
-- SOXL is a 3x leveraged ETF. A 33% drop in semiconductors causes 
-  approximately 100% loss in SOXL. Put sellers face assignment risk 
-  that can exceed the premium collected by orders of magnitude.
-- The variance risk premium (the documented edge underlying this 
-  strategy) is known to compress or disappear during sustained 
-  bear markets and liquidity crises — precisely when losses are largest.
-- IV Rank is a backward-looking signal. High IV Rank indicates 
-  volatility has been elevated historically, not that it will remain 
-  so or revert predictably.
+
+- SOXL is a 3x leveraged ETF. A 33% drop in semiconductors causes
+approximately 100% loss in SOXL. Put sellers face assignment risk
+that can exceed the premium collected by orders of magnitude.
+- The variance risk premium (the documented edge underlying this
+strategy) is known to compress or disappear during sustained
+bear markets and liquidity crises — precisely when losses are largest.
+- IV Rank is a backward-looking signal. High IV Rank indicates
+volatility has been elevated historically, not that it will remain
+so or revert predictably.
 
 ### What would make this more robust
-- Walk-forward validation with train/test splits
-- Monte Carlo significance testing (p-value on Sharpe ratio)
-- Stress testing against known crash periods (2020, 2022, 2026)
+
 - Real implied volatility data from CBOE or OptionMetrics
 - Out-of-sample paper trading with live trade journal
 - Kelly Criterion position sizing with drawdown limits
 
 ### Intended use
-This tool is intended as a **signal generation and research aid**, 
-not a fully autonomous trading system. All signals should be verified 
-manually against live options chain data before execution. Position 
+
+This tool is intended as a **signal generation and research aid**,
+not a fully autonomous trading system. All signals should be verified
+manually against live options chain data before execution. Position
 sizing should never exceed 1–2% of total capital per trade.
 
 *Built as a quant portfolio project. Not financial advice.*
