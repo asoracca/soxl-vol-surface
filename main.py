@@ -6,8 +6,9 @@ Runs the full SOXL options analysis pipeline:
   2. IV Rank + Percentile dashboard
   3. Live options chain → vol surface + smile
   4. Skew analysis
-  5. Backtest of put selling strategy (in-sample baseline + walk-forward OOS)
+  5. Backtest of put-selling strategy (in-sample baseline + walk-forward OOS)
   6. Today's signal
+  7. VIX term-structure regime (lookback-free IV-Rank proxy)
 """
 
 import warnings
@@ -23,6 +24,7 @@ from src.backtest     import (run_backtest, print_backtest_stats, plot_backtest,
                               walk_forward_backtest, monte_carlo_significance,
                               stress_test)
 from src.trade_signal import run_signal
+from vix_term_structure import report_term_structure
 
 
 def main():
@@ -48,7 +50,7 @@ def main():
     print("\n── 5. Backtest ─────────────────────────────────────")
     IV_RANK_THRESHOLD = 50  # matches the live discipline rule (see README)
 
-    # 5a. In-sample (naive) — shown ONLY as a baseline. NOT tradeable:
+    # 5a. In-sample (naive) — baseline ONLY. NOT tradeable:
     #     same data used to pick and test the rule -> look-ahead / overfit.
     trades = run_backtest("SOXL", iv_rank_threshold=IV_RANK_THRESHOLD)
     in_sample_sharpe = print_backtest_stats(
@@ -76,6 +78,10 @@ def main():
 
     print("\n── 6. Today's Signal ───────────────────────────────")
     run_signal()
+
+    print("\n── 7. VIX Term Structure (regime / IV proxy) ───────")
+    # Reuse the project's proven fetcher so the index pulls work on your network.
+    report_term_structure(fetch_fn=fetch_price_history)
 
 
 if __name__ == "__main__":
